@@ -149,7 +149,7 @@ The app does **not** require Ollama. Without it, the deterministic analyzer runs
 If Ollama is installed on Windows and listening on the normal port, pull the model configured in `appsettings.json`:
 
 ```powershell
-ollama pull gemma3:4b
+ollama pull gemma4:26b
 ```
 
 Then run Chaos Inbox in Visual Studio again.
@@ -363,7 +363,7 @@ http://ollama:11434
 Pull the configured model into the Ollama container once:
 
 ```powershell
-docker compose exec ollama ollama pull gemma3:4b
+docker compose exec ollama ollama pull gemma4:26b
 ```
 
 Refresh and import a new email.
@@ -390,67 +390,7 @@ Do not run `-v` during a persistence demonstration.
 
 ---
 
-# Project structure
 
-```text
-ChaosInboxSolution/
-├── ChaosInbox.sln
-├── docker-compose.yml
-├── README.md
-├── ARCHITECTURE.md
-├── LOG.md
-├── SIDEQUEST.md
-├── ChaosInbox/
-│   ├── Data/
-│   │   └── ChaosInboxDbContext.cs
-│   ├── Models/
-│   │   ├── EmailTicket.cs
-│   │   ├── EmailEnvelope.cs
-│   │   ├── ChaosEvent.cs
-│   │   └── Enums.cs
-│   ├── Services/
-│   │   ├── TicketProcessor.cs
-│   │   ├── OllamaTicketAnalyzer.cs
-│   │   ├── FallbackTicketAnalyzer.cs
-│   │   ├── GmailEmailService.cs
-│   │   ├── EmlEmailService.cs
-│   │   ├── DemoEmailService.cs
-│   │   ├── ChaosEngine.cs
-│   │   └── UserContext.cs
-│   ├── credentials/
-│   │   └── README.txt
-│   ├── samples/
-│   │   ├── urgent-security.eml
-│   │   └── normal-task.eml
-│   ├── wwwroot/
-│   │   └── index.html
-│   ├── Dockerfile
-│   ├── Program.cs
-│   └── appsettings.json
-└── ChaosInbox.Tests/
-    ├── FallbackTicketAnalyzerTests.cs
-    └── ChaosScoreTests.cs
-```
-
----
-
-# Demo flow for Falcorp
-
-A clean 10–15 minute demo can be:
-
-```text
-1. Explain the problem: email is unstructured work.
-2. Import demo or .eml messages.
-3. Show summary + priority + deadline extraction.
-4. Show sorting by priority/deadline.
-5. Move one ticket New → InProgress → Completed.
-6. Restart the app and show persistence.
-7. Inject an API failure and show the ticket survives.
-8. Turn Ollama off, import another email, show FALLBACK.
-9. Turn Ollama on, import another email, show OLLAMA.
-10. Show the ugly-path automated tests.
-11. Explain the architecture decision you are least confident about.
-```
 
 # Known intentional limitation
 
