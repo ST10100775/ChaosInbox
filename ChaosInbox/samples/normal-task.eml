@@ -1,0 +1,9 @@
+From: Product Team <product@example.test>
+To: developer@example.test
+Date: Mon, 07 Sep 2026 10:00:00 +0200
+Subject: Add screenshots to the prototype write-up
+Message-ID: <chaos-demo-normal@example.test>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=utf-8
+
+Please add three screenshots of the ticket dashboard to the project write-up. The deadline is 14 September 2026. Include one screenshot that shows an injected failure.

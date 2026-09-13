@@ -1,0 +1,10 @@
+.vs/
+bin/
+obj/
+**/bin/
+**/obj/
+ChaosInbox/data/
+ChaosInbox/.tokens/
+ChaosInbox/credentials/credentials.json
+*.user
+*.suo

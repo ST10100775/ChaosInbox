@@ -1,0 +1,9 @@
+From: Ops Team <ops@example.test>
+To: developer@example.test
+Date: Mon, 07 Sep 2026 14:00:00 +0200
+Subject: URGENT: investigate suspicious authentication spike
+Message-ID: <chaos-demo-urgent@example.test>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=utf-8
+
+We noticed a suspicious authentication spike on the prototype service. Please investigate immediately and send a short incident summary by EOD today. If it is a false alarm, document why.

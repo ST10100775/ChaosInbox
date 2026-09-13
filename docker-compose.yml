@@ -1,0 +1,22 @@
+services:
+  web:
+    build:
+      context: ./ChaosInbox
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    volumes:
+      - chaos-data:/app/data
+    depends_on:
+      - ollama
+
+  ollama:
+    image: ollama/ollama:latest
+    volumes:
+      - ollama-data:/root/.ollama
+    ports:
+      - "11434:11434"
+
+volumes:
+  chaos-data:
+  ollama-data:

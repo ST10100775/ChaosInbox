@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Chaos Inbox</title>
+  <style>
+    :root { color-scheme: dark; --bg:#0a0d0c; --panel:#111714; --line:#28352e; --text:#e8f5ed; --muted:#91a399; --accent:#6cf5a9; --warn:#ffd166; --danger:#ff6b6b; }
+    * { box-sizing:border-box; }
+    body { margin:0; font-family:Consolas,"Cascadia Code",monospace; background:radial-gradient(circle at top,#122019 0,#0a0d0c 42%); color:var(--text); }
+    header { position:sticky; top:0; z-index:5; background:rgba(10,13,12,.94); backdrop-filter:blur(12px); border-bottom:1px solid var(--line); padding:18px 24px; }
+    .top { max-width:1400px; margin:auto; display:flex; gap:16px; align-items:center; justify-content:space-between; flex-wrap:wrap; }
+    h1 { margin:0; font-size:24px; color:var(--accent); letter-spacing:.08em; }
+    .subtitle { color:var(--muted); font-size:12px; margin-top:5px; }
+    main { max-width:1400px; margin:0 auto; padding:24px; }
+    .toolbar,.stats { display:flex; gap:10px; flex-wrap:wrap; margin-bottom:18px; }
+    button,.file-label,select,input { background:#101713; color:var(--text); border:1px solid var(--line); border-radius:8px; padding:10px 12px; font:inherit; }
+    button,.file-label { cursor:pointer; }
+    button:hover,.file-label:hover { border-color:var(--accent); }
+    button.primary { color:#031009; background:var(--accent); border-color:var(--accent); font-weight:700; }
+    button.danger { border-color:#6d2c2c; color:#ffb3b3; }
+    input { min-width:180px; }
+    input[type=file] { display:none; }
+    .stat { flex:1; min-width:140px; background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:14px; }
+    .stat b { display:block; font-size:25px; color:var(--accent); margin-top:5px; }
+    .stat span { color:var(--muted); font-size:11px; text-transform:uppercase; }
+    .notice { border:1px solid var(--line); background:#0e1511; padding:12px 14px; border-radius:8px; color:var(--muted); margin-bottom:18px; }
+    .notice.error { border-color:#723535; color:#ffbcbc; }
+    .tickets { display:grid; gap:14px; }
+    .ticket { background:var(--panel); border:1px solid var(--line); border-radius:12px; overflow:hidden; }
+    .ticket.overdue { border-color:#7f3737; }
+    .ticket-head { display:grid; grid-template-columns:110px 1fr auto; gap:14px; padding:16px; align-items:start; }
+    .priority { border-radius:999px; padding:7px 9px; text-align:center; font-size:11px; font-weight:700; border:1px solid var(--line); }
+    .priority.Critical { color:#ff9d9d; border-color:#713434; }
+    .priority.High { color:#ffd98a; border-color:#67562d; }
+    .priority.Medium { color:#9cd7ff; border-color:#315268; }
+    .priority.Low { color:#a9bbb1; }
+    .subject { font-size:16px; font-weight:700; margin-bottom:7px; }
+    .meta { color:var(--muted); font-size:12px; line-height:1.7; }
+    .summary { padding:0 16px 16px 140px; color:#d8e8df; line-height:1.6; }
+    .ticket-actions { border-top:1px solid var(--line); padding:12px 16px; display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+    .ticket-actions select { padding:8px; }
+    details { border-top:1px dashed var(--line); padding:12px 16px; color:var(--muted); }
+    details pre { white-space:pre-wrap; max-height:260px; overflow:auto; background:#090d0b; padding:12px; border-radius:8px; color:#bed0c5; }
+    .right { text-align:right; white-space:nowrap; }
+    .deadline { color:var(--warn); font-size:12px; }
+    .deadline.overdue { color:var(--danger); font-weight:700; }
+    .empty { padding:50px 20px; text-align:center; border:1px dashed var(--line); color:var(--muted); border-radius:12px; }
+    .badge { display:inline-block; font-size:10px; color:var(--muted); border:1px solid var(--line); border-radius:999px; padding:3px 6px; margin-left:5px; }
+    @media(max-width:800px){ .ticket-head{grid-template-columns:1fr}.summary{padding:0 16px 16px}.right{text-align:left} }
+  </style>
+</head>
+<body>
+<header>
+  <div class="top">
+    <div><h1>☢ CHAOS INBOX</h1><div class="subtitle">EMAIL → AI TRIAGE → TICKET → HUMAN COMPLETION</div></div>
+    <div>
+      <label for="userId">USER</label>
+      <input id="userId" maxlength="80" placeholder="kelisha" />
+      <button onclick="saveUser()">Switch</button>
+    </div>
+  </div>
+</header>
+<main>
+  <div class="toolbar">
+    <button class="primary" onclick="importDemo()">+ Import demo mail</button>
+    <button onclick="syncGmail()">↻ Sync Gmail</button>
+    <label class="file-label" for="emlFiles">↑ Import .eml</label><input id="emlFiles" type="file" accept=".eml,message/rfc822" multiple />
+    <button onclick="loadAll()">Refresh</button>
+    <select id="filter" onchange="loadTickets()"><option value="">All statuses</option><option>New</option><option>InProgress</option><option>Waiting</option><option>Completed</option><option>Archived</option></select>
+    <button class="danger" onclick="clearMine()">Clear my tickets</button>
+  </div>
+
+  <div id="notice" class="notice">The app still works when Ollama is offline: it falls back to deterministic triage rules.</div>
+  <div id="stats" class="stats"></div>
+  <div id="tickets" class="tickets"></div>
+</main>
+<script>
+const $ = id => document.getElementById(id);
+let userId = localStorage.getItem('chaos-user') || 'demo';
+$('userId').value = userId;
+
+function headers(extra={}) { return { 'X-User-Id': userId, ...extra }; }
+function esc(s='') { return String(s).replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c])); }
+function show(msg, error=false){ $('notice').textContent=msg; $('notice').className='notice'+(error?' error':''); }
+function saveUser(){ userId=$('userId').value.trim() || 'demo'; localStorage.setItem('chaos-user',userId); show(`Switched local demo identity to ${userId}.`); loadAll(); }
+
+async function api(url, options={}){
+  options.headers = headers(options.headers || {});
+  const response = await fetch(url, options);
+  let data=null; const text=await response.text();
+  try { data=text?JSON.parse(text):null; } catch { data=text; }
+  if(!response.ok) throw new Error(data?.detail || data?.error || data || `HTTP ${response.status}`);
+  return data;
+}
+
+async function loadAll(){ await Promise.all([loadTickets(),loadStats()]); }
+async function loadStats(){
+  try{
+    const s=await api('/api/stats');
+    $('stats').innerHTML=[['Total',s.total],['Open',s.open],['Critical',s.critical],['Overdue',s.overdue],['Completed',s.completed],['AI',s.aiProcessed],['Fallback',s.fallbackProcessed]].map(([k,v])=>`<div class="stat"><span>${k}</span><b>${v}</b></div>`).join('');
+  }catch(e){ show(e.message,true); }
+}
+
+async function loadTickets(){
+  try{
+    const filter=$('filter').value; const items=await api('/api/tickets'+(filter?`?status=${encodeURIComponent(filter)}`:''));
+    if(!items.length){ $('tickets').innerHTML='<div class="empty">NO TICKETS YET // import demo mail, Gmail, or .eml files.</div>'; return; }
+    const now=Date.now();
+    $('tickets').innerHTML=items.map(t=>{
+      const deadline=t.deadlineUtc?new Date(t.deadlineUtc):null; const overdue=deadline && deadline.getTime()<now && !['Completed','Archived'].includes(t.status);
+      return `<article class="ticket ${overdue?'overdue':''}">
+        <div class="ticket-head">
+          <div class="priority ${esc(t.priority)}">${esc(t.priority).toUpperCase()}</div>
+          <div><div class="subject">#${t.id} ${esc(t.subject)}</div><div class="meta">FROM ${esc(t.sender||'(missing sender)')}<br>SOURCE ${esc(t.source)} · RECEIVED ${new Date(t.receivedAtUtc).toLocaleString()} ${t.aiUsed?'<span class="badge">OLLAMA</span>':'<span class="badge">FALLBACK</span>'}</div></div>
+          <div class="right"><div>STATUS: <strong>${esc(t.status)}</strong></div><div class="deadline ${overdue?'overdue':''}">${deadline?(overdue?'⚠ OVERDUE · ':'DEADLINE · ')+deadline.toLocaleString():'NO DEADLINE'}</div><div class="meta">confidence ${Math.round((t.confidence||0)*100)}% · chaos ${t.chaosScore}/100</div></div>
+        </div>
+        <div class="summary"><strong>TICKET SUMMARY //</strong> ${esc(t.summary||'[missing summary]')}${t.lastProcessingError?`<div class="meta">⚠ ${esc(t.lastProcessingError)}</div>`:''}</div>
+        <div class="ticket-actions">
+          <span>Set status:</span><select onchange="changeStatus(${t.id},this.value)">${['New','InProgress','Waiting','Completed','Archived'].map(s=>`<option ${s===t.status?'selected':''}>${s}</option>`).join('')}</select>
+          <button onclick="injectChaos(${t.id},'api')">☢ API failure</button><button onclick="injectChaos(${t.id},'deadline')">☢ Bad deadline</button><button onclick="injectChaos(${t.id},'summary')">☢ Break summary</button>
+        </div>
+        <details><summary>raw email body</summary><pre>${esc(t.originalBody)}</pre></details>
+      </article>`;
+    }).join('');
+  }catch(e){ show(e.message,true); }
+}
+
+async function importDemo(){ try{ show('Importing demo emails and triaging them...'); const r=await api('/api/demo/import',{method:'POST'}); show(`Demo import finished: ${r.created} new ticket(s).`); await loadAll(); }catch(e){show(e.message,true);} }
+async function syncGmail(){ try{ show('Starting Gmail OAuth/sync. When running from Visual Studio, your browser may open for Google consent.'); const r=await api('/api/gmail/sync?max=20',{method:'POST'}); show(`Gmail sync: fetched ${r.fetched}, created ${r.created} new ticket(s).`); await loadAll(); }catch(e){show(e.message,true);} }
+async function changeStatus(id,status){ try{ await api(`/api/tickets/${id}/status`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({status})}); show(`Ticket #${id} → ${status}.`); await loadAll(); }catch(e){show(e.message,true);} }
+async function injectChaos(id,mode){ try{ await api(`/api/tickets/${id}/chaos?mode=${mode}`,{method:'POST'}); show(`Chaos '${mode}' injected into ticket #${id}; persisted ticket survived.`); await loadAll(); }catch(e){show(e.message,true);} }
+async function clearMine(){ if(!confirm(`Delete all local tickets for '${userId}'?`))return; try{await api('/api/tickets',{method:'DELETE'});show('Your local tickets were cleared.');await loadAll();}catch(e){show(e.message,true);} }
+
+$('emlFiles').addEventListener('change',async e=>{
+  const files=[...e.target.files]; if(!files.length)return;
+  const form=new FormData(); files.forEach(f=>form.append('files',f));
+  try{show(`Importing ${files.length} .eml file(s)...`); const r=await fetch('/api/eml/import',{method:'POST',headers:headers(),body:form}); const data=await r.json(); if(!r.ok)throw new Error(data.error||`HTTP ${r.status}`); show(`EML import processed ${data.length} file(s).`); await loadAll();}catch(err){show(err.message,true);} finally{e.target.value='';}
+});
+
+loadAll();
+</script>
+</body>
+</html>
