@@ -397,3 +397,6 @@ Do not run `-v` during a persistence demonstration.
 The `X-User-Id` dashboard identity is **not authentication**. It is only lightweight tenant separation for the Build Week requirement that the product not be welded to one user's records.
 
 If this became a real product, the first upgrade would be proper authentication plus server-side OAuth account linking. For this week, adding a complete identity platform would create more surface area than product value.
+
+## VIDEO DEMONSTRATION
+[CHAOS INBOX DEMONSTRATION](https://drive.google.com/drive/folders/1p0AIpuKVJp-ek3VHgpcxpfDN2vhckhrA?usp=sharing)
